@@ -1,0 +1,26 @@
+[package]
+name = "gvac"
+version = "0.1.0"
+description = "gva Client"
+authors = ["you"]
+license = "MIT"
+edition = "2021"
+rust-version = "1.77"
+
+[build-dependencies]
+tauri-build = { version = "2.0.1", features = [] }
+
+[dependencies]
+chrono = { version = "0.4", features = ["serde", "clock"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ssh2 = "0.9"
+tauri = { version = "2.0.2", features = [] }
+tauri-plugin-dialog = "2.0.0"
+thiserror = "2"
+uuid = { version = "1", features = ["v4", "serde"] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

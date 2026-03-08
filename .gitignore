@@ -1,0 +1,11 @@
+node_modules
+.DS_Store
+dist
+.vite
+*.log
+.cache
+
+# rust
+target
+src-tauri/target
+Cargo.lock
