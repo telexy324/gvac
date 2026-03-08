@@ -7,9 +7,10 @@ mod services;
 mod state;
 
 use commands::{
-    close_session, close_terminal, create_session, http_get, http_post_json, http_request,
-    list_sessions, run_command, send_keepalive, sftp_download, sftp_list_dir, sftp_upload,
-    start_terminal, terminal_read, terminal_resize, terminal_write,
+    api_clear_auth, api_login, api_request, api_set_auth, api_set_base_url, close_session,
+    close_terminal, create_session, http_get, http_post_json, http_request, list_sessions,
+    run_command, send_keepalive, sftp_download, sftp_list_dir, sftp_upload, start_terminal,
+    terminal_read, terminal_resize, terminal_write,
 };
 use state::AppState;
 
@@ -33,7 +34,12 @@ fn main() {
             close_terminal,
             http_request,
             http_get,
-            http_post_json
+            http_post_json,
+            api_set_base_url,
+            api_set_auth,
+            api_clear_auth,
+            api_request,
+            api_login
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri app");

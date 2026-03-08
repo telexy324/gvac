@@ -19,9 +19,18 @@ pub struct TerminalSession {
 }
 
 #[derive(Clone, Default)]
+pub struct ApiClientState {
+    pub base_url: Option<String>,
+    pub timeout_ms: Option<u64>,
+    pub token: Option<String>,
+    pub user_id: Option<String>,
+}
+
+#[derive(Clone, Default)]
 pub struct AppState {
     pub sessions: Arc<Mutex<HashMap<String, SshSession>>>,
     pub terminals: Arc<Mutex<HashMap<String, TerminalSession>>>,
+    pub api: Arc<Mutex<ApiClientState>>,
 }
 
 pub fn now_utc() -> DateTime<Utc> {

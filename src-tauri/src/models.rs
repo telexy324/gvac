@@ -104,3 +104,44 @@ pub struct HttpResponse {
     pub headers: HashMap<String, String>,
     pub body: String,
 }
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiClientConfigRequest {
+    pub base_url: String,
+    pub timeout_ms: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiAuthRequest {
+    pub token: Option<String>,
+    pub user_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiRequest {
+    pub url: String,
+    pub method: String,
+    pub headers: Option<HashMap<String, String>>,
+    pub query: Option<HashMap<String, String>>,
+    pub data: Option<serde_json::Value>,
+    pub timeout_ms: Option<u64>,
+    pub use_auth: Option<bool>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiResponse {
+    pub status: u16,
+    pub headers: HashMap<String, String>,
+    pub body: serde_json::Value,
+    pub raw_body: String,
+    pub code: Option<i64>,
+    pub msg: Option<String>,
+    pub success: bool,
+    pub new_token: Option<String>,
+    pub unauthorized: bool,
+    pub should_reload: bool,
+}
