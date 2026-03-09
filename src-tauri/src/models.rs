@@ -137,6 +137,7 @@ pub struct ApiResponse {
     pub status: u16,
     pub headers: HashMap<String, String>,
     pub body: serde_json::Value,
+    pub data: Option<serde_json::Value>,
     pub raw_body: String,
     pub code: Option<i64>,
     pub msg: Option<String>,

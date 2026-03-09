@@ -193,11 +193,13 @@ fn map_response(response: reqwest::blocking::Response) -> AppResult<ApiResponse>
         .and_then(|v| v.get("reload"))
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
+    let data = body.get("data").cloned();
 
     Ok(ApiResponse {
         status: status.as_u16(),
         headers,
         body,
+        data,
         raw_body,
         code,
         msg,
