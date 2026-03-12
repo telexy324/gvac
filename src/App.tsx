@@ -10,9 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import ServersPage from "@/pages/ServersPage";
-import { Upload } from "lucide-react";
+import { ChevronDown, LogOut, Upload } from "lucide-react";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useNavigate } from "react-router-dom";
 
 interface TerminalStartResult {
   terminalId: string;
@@ -142,6 +145,8 @@ export default function App() {
   const [keepaliveIntervalSec, setKeepaliveIntervalSec] = useState(30);
   const [lastKeepaliveAt, setLastKeepaliveAt] = useState<number | null>(null);
   const [serversRefreshTick, setServersRefreshTick] = useState(0);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
+  const userInfo = useAuthStore((s) => s.userInfo);
 
   const terminalContainerRef = useRef<HTMLDivElement | null>(null);
   const xtermRef = useRef<Terminal | null>(null);
@@ -151,6 +156,7 @@ export default function App() {
   const terminalGenerationRef = useRef(0);
   const sessionBufferRef = useRef<Map<string, string>>(new Map());
   const maxBufferSize = 200_000;
+  const navigate = useNavigate();
 
   const activeSession = useMemo(
     () => sessions.find((session) => session.id === activeSessionId) ?? null,
@@ -970,6 +976,11 @@ export default function App() {
     ? new Date(lastKeepaliveAt).toLocaleTimeString()
     : "尚未发送";
 
+  const logout = async () => {
+    clearAuth();
+    navigate("/", { replace: true });
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="flex h-screen flex-col">
@@ -1061,6 +1072,19 @@ export default function App() {
           <div className="ml-auto text-xs text-muted-foreground">
             {activeSessionLabel ? `Active: ${activeSessionLabel}` : "No active session"}
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 rounded-md border px-2 py-1 hover:bg-muted">
+                <span className="max-w-[120px] truncate text-sm">{userInfo?.ID || '未登录用户'}</span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={logout}>
+                <LogOut className="mr-2 h-4 w-4" />退出登录
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="flex flex-1 overflow-hidden">

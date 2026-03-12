@@ -12,24 +12,28 @@
     "prepare:webview2-fixed": "scripts/prepare-webview2-fixed.sh"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.0.0",
-    "@tauri-apps/plugin-dialog": "^2.0.0",
+    "@fontsource-variable/geist": "^5.2.8",
     "@radix-ui/react-label": "^2.1.2",
     "@radix-ui/react-separator": "^1.1.1",
     "@radix-ui/react-slot": "^1.1.1",
     "@radix-ui/react-tabs": "^1.1.2",
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
+    "radix-ui": "^1.4.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.30.1",
+    "shadcn": "^4.0.5",
     "sonner": "^1.7.4",
-    "tailwind-merge": "^2.6.0",
+    "tailwind-merge": "^2.6.1",
     "tailwindcss-animate": "^1.0.7",
-    "zustand": "^5.0.8",
+    "tw-animate-css": "^1.4.0",
     "xterm": "5.3.0",
-    "xterm-addon-fit": "0.8.0"
+    "xterm-addon-fit": "0.8.0",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",

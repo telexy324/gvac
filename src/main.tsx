@@ -15,8 +15,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
-  const token = useAuthStore((s) => s.token);
-  return token ? <Navigate to="/layout" replace /> : <>{children}</>;
+  return <>{children}</>;
 }
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
