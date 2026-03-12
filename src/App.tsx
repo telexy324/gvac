@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import ServersPage from "@/pages/ServersPage";
 import { Upload } from "lucide-react";
 
 interface TerminalStartResult {
@@ -129,7 +130,7 @@ export default function App() {
     commandTabs[0].id
   );
   const [commandTarget, setCommandTarget] = useState<"current" | "all">("current");
-  const [leftSidebarTab, setLeftSidebarTab] = useState<"quick" | "recent" | "browser">(
+  const [leftSidebarTab, setLeftSidebarTab] = useState<"quick" | "recent" | "browser" | "servers">(
     "quick"
   );
   const [recentConnections, setRecentConnections] = useState<ConnectRequest[]>([]);
@@ -140,6 +141,7 @@ export default function App() {
   const [keepaliveEnabled, setKeepaliveEnabled] = useState(false);
   const [keepaliveIntervalSec, setKeepaliveIntervalSec] = useState(30);
   const [lastKeepaliveAt, setLastKeepaliveAt] = useState<number | null>(null);
+  const [serversRefreshTick, setServersRefreshTick] = useState(0);
 
   const terminalContainerRef = useRef<HTMLDivElement | null>(null);
   const xtermRef = useRef<Terminal | null>(null);
@@ -1067,7 +1069,8 @@ export default function App() {
               {[
                 { id: "quick", label: "Quick Connect" },
                 { id: "recent", label: "Recent Sessions" },
-                { id: "browser", label: "Browser" }
+                { id: "browser", label: "Browser" },
+                { id: "servers", label: "Servers" }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -1079,7 +1082,12 @@ export default function App() {
                       : "border-border/60 bg-card/80 text-muted-foreground hover:text-foreground"
                   )}
                   style={{ writingMode: "vertical-rl" }}
-                  onClick={() => setLeftSidebarTab(tab.id as typeof leftSidebarTab)}
+                  onClick={() => {
+                    if (tab.id === "servers") {
+                      setServersRefreshTick((prev) => prev + 1);
+                    }
+                    setLeftSidebarTab(tab.id as typeof leftSidebarTab);
+                  }}
                 >
                   {tab.label}
                 </button>
@@ -1359,6 +1367,10 @@ export default function App() {
                   </div>
                 </div>
               ) : null}
+
+              {leftSidebarTab === "servers" ? (
+                <ServersPage key={serversRefreshTick} refreshTick={serversRefreshTick} />
+              ) : null}
             </div>
           </aside>
 
@@ -1425,7 +1437,9 @@ export default function App() {
                         VT100
                       </Badge>
                     </div>
-                    <div className="text-[11px] text-muted-foreground">
+                    <div
+                      className="text-[11px] text-muted-foreground"
+                    >
                       {activeSessionLabel
                         ? `Connected: ${activeSessionLabel}`
                         : "No active session"}
