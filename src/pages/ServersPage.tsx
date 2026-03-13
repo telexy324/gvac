@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { getServerList } from "@/api/cmdb";
+import {getAdminSystems, getServerList, Server, System} from "@/api/cmdb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-type Server = {
-  ID: number;
-  hostname: string;
-  manageIp: string;
-  sshPort: number;
-};
+// type Server = {
+//   ID: number;
+//   hostname: string;
+//   manageIp: string;
+//   sshPort: number;
+// };
 
 type SearchState = {
   hostname: string;
@@ -34,6 +34,7 @@ export default function ServersPage({ refreshTick = 0 }: ServersPageProps) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
+  const [systems, setSystems] = useState<System[]>([]);
 
   const query = async (options?: {
     nextPage?: number;
@@ -58,6 +59,25 @@ export default function ServersPage({ refreshTick = 0 }: ServersPageProps) {
       toast.error("获取服务器列表失败");
     }
   };
+
+  const filterSystemName = (systemId: number):string => {
+    const rowLabel = systems.filter(item => item.ID === systemId)
+    return rowLabel && rowLabel[0] && rowLabel[0].name
+  };
+
+  useEffect(() => {
+    const fetchSystems = async () => {
+      try {
+        const res = await getAdminSystems();
+        if (res?.code === 0 || res?.success) {
+          setSystems(res.data?.list || []);
+        }
+      } catch {
+        toast.error("获取系统列表失败");
+      }
+    };
+    void fetchSystems();
+  }, []);
 
   useEffect(() => {
     void query();
@@ -113,6 +133,7 @@ export default function ServersPage({ refreshTick = 0 }: ServersPageProps) {
               <TableHead>服务器</TableHead>
               <TableHead>管理IP</TableHead>
               <TableHead>端口</TableHead>
+              <TableHead>系统</TableHead>
               <TableHead>操作</TableHead>
             </TableRow>
           </TableHeader>
@@ -123,6 +144,7 @@ export default function ServersPage({ refreshTick = 0 }: ServersPageProps) {
                 <TableCell>{row.hostname}</TableCell>
                 <TableCell>{row.manageIp}</TableCell>
                 <TableCell>{row.sshPort}</TableCell>
+                <TableCell>{filterSystemName(row.systemId)}</TableCell>
                 <TableCell>
                   <Button size="sm" variant="secondary" onClick={() => undefined}>
                     执行

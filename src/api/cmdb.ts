@@ -1,7 +1,7 @@
 import { type ApiResponse } from "@/lib/api";
 import { apiRequest } from "@/api/service";
 
-type Server = {
+export type Server = {
   ID: number;
   hostname: string;
   displayName?: string;
@@ -13,7 +13,7 @@ type Server = {
   systemId?: number;
 };
 
-type ServerListData = {
+export type ServerListData = {
   list: Server[];
   total: number;
 };
@@ -23,5 +23,30 @@ export const getServerList = async (data: Record<string, unknown>): Promise<ApiR
     url: "/cmdb/getServerList",
     method: "POST",
     data
+  });
+};
+
+export type System = {
+  ID: number;
+  name: string;
+};
+
+export type SystemListData = {
+  list: System[];
+  total: number;
+};
+
+export const getSystemList = async (data: Record<string, unknown>): Promise<ApiResponse<SystemListData>> => {
+  return apiRequest<SystemListData>({
+    url: "/cmdb/getSystemList",
+    method: "POST",
+    data
+  });
+};
+
+export const getAdminSystems = async (): Promise<ApiResponse<SystemListData>> => {
+  return apiRequest<SystemListData>({
+    url: "/cmdb/getAdminSystems",
+    method: "POST",
   });
 };
