@@ -32,7 +32,7 @@ export type System = {
 };
 
 export type SystemListData = {
-  list: System[];
+  systems: System[];
   total: number;
 };
 

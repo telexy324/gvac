@@ -60,9 +60,13 @@ export default function ServersPage({ refreshTick = 0 }: ServersPageProps) {
     }
   };
 
-  const filterSystemName = (systemId: number):string => {
-    const rowLabel = systems.filter(item => item.ID === systemId)
-    return rowLabel && rowLabel[0] && rowLabel[0].name
+  const filterSystemName = (systemId: number|undefined):string => {
+    if (systemId) {
+      const rowLabel = systems.find(item => item.ID === systemId)
+      return rowLabel ? rowLabel.name:"no"
+    } else {
+      return "-"
+    }
   };
 
   useEffect(() => {
@@ -70,7 +74,7 @@ export default function ServersPage({ refreshTick = 0 }: ServersPageProps) {
       try {
         const res = await getAdminSystems();
         if (res?.code === 0 || res?.success) {
-          setSystems(res.data?.list || []);
+          setSystems(res.data?.systems || []);
         }
       } catch {
         toast.error("获取系统列表失败");
