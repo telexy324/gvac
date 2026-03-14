@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 
 type ServersPageProps = {
   refreshTick?: number;
+  onOpenServer?: (server: Server) => Promise<void> | void;
 };
 
 type SearchState = {
@@ -20,7 +21,7 @@ const defaultSearch: SearchState = {
   manageIp: ""
 };
 
-export default function ServersPage({ refreshTick = 0 }: ServersPageProps) {
+export default function ServersPage({ refreshTick = 0, onOpenServer }: ServersPageProps) {
   const [systems, setSystems] = useState<System[]>([]);
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const [loadingSystems, setLoadingSystems] = useState(false);
@@ -105,13 +106,25 @@ export default function ServersPage({ refreshTick = 0 }: ServersPageProps) {
     void loadSystems();
   }, [refreshTick]);
 
+  const callSSH = async (server: Server) => {
+    if (!onOpenServer) {
+      toast.error("未配置 SSH 打开逻辑");
+      return;
+    }
+    try {
+      await onOpenServer(server);
+    } catch (error) {
+      toast.error(String(error));
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Servers</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-2 md:grid-cols-3">
+        <div className="grid gap-2 md:grid-cols-1">
           <Input
             placeholder="服务器名"
             value={search.hostname}
@@ -182,8 +195,14 @@ export default function ServersPage({ refreshTick = 0 }: ServersPageProps) {
                               key={server.ID}
                               className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted/40"
                             >
-                              <span className="font-medium text-foreground">{server.hostname}</span>
-                              <span className="ml-2">({server.manageIp})</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void callSSH(server);
+                                }}
+                              >
+                                <span className="font-medium text-foreground">{server.manageIp}</span>
+                              </button>
                             </div>
                           ))
                         )}

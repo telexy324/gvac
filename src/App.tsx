@@ -16,6 +16,8 @@ import ServersPage from "@/pages/ServersPage";
 import { ChevronDown, LogOut, Upload } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useNavigate } from "react-router-dom";
+import { Server } from "@/api/cmdb";
+import { createTauriSessionFromJumpToken } from "@/api/ssh";
 
 interface TerminalStartResult {
   terminalId: string;
@@ -537,6 +539,30 @@ export default function App() {
 
   const reconnectFromRecent = async (request: ConnectRequest) => {
     await openSessionRequests([request]);
+  };
+
+  const openJumpSessionFromServer = async (server: Server) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const created = await createTauriSessionFromJumpToken(
+        {
+          servers: [server],
+          client: ""
+        },
+        {
+          label: server.hostname || server.manageIp
+        }
+      );
+
+      setSessions((prev) => [created, ...prev]);
+      setActiveSessionId(created.id);
+    } catch (err) {
+      setError(String(err));
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const closeSession = async (sessionId: string) => {
@@ -1393,7 +1419,11 @@ export default function App() {
               ) : null}
 
               {leftSidebarTab === "servers" ? (
-                <ServersPage key={serversRefreshTick} refreshTick={serversRefreshTick} />
+                <ServersPage
+                  key={serversRefreshTick}
+                  refreshTick={serversRefreshTick}
+                  onOpenServer={openJumpSessionFromServer}
+                />
               ) : null}
             </div>
           </aside>
