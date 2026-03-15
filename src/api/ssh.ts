@@ -2,7 +2,7 @@ import { type ApiResponse } from "@/lib/api";
 import { apiRequest } from "@/api/service";
 import { invoke } from "@tauri-apps/api/core";
 import { SessionInfo } from "@/types";
-import {Server} from "@/api/cmdb";
+import { Server } from "@/api/cmdb";
 
 export type GetJumpServerTokenPayload = {
   servers: Array<Server>;

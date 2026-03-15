@@ -8,9 +8,9 @@ mod state;
 
 use commands::{
     api_clear_auth, api_login, api_request, api_set_auth, api_set_base_url, close_session,
-    close_terminal, create_session, http_get, http_post_json, http_request, list_sessions,
-    run_command, send_keepalive, sftp_download, sftp_list_dir, sftp_upload, start_terminal,
-    terminal_read, terminal_resize, terminal_write,
+    close_terminal, create_session, duplicate_session, http_get, http_post_json, http_request,
+    list_sessions, run_command, send_keepalive, sftp_download, sftp_list_dir, sftp_upload,
+    start_terminal, terminal_read, terminal_resize, terminal_write,
 };
 use state::AppState;
 
@@ -20,6 +20,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             create_session,
+            duplicate_session,
             list_sessions,
             close_session,
             run_command,

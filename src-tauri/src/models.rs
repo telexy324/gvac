@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(tag = "kind")]
 pub enum AuthMethod {
     #[serde(rename = "none")]
@@ -17,7 +17,7 @@ pub enum AuthMethod {
     },
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ConnectRequest {
     pub label: Option<String>,
     pub host: String,

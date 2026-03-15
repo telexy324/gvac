@@ -1,4 +1,5 @@
 export type AuthMethod =
+  | { kind: "none" }
   | { kind: "password"; password: string }
   | { kind: "privateKey"; privateKeyPath: string; passphrase?: string };
 

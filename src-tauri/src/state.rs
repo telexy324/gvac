@@ -5,10 +5,11 @@ use std::sync::{Arc, Mutex};
 use chrono::{DateTime, Utc};
 use ssh2::{Channel, Session};
 
-use crate::models::SessionInfo;
+use crate::models::{ConnectRequest, SessionInfo};
 
 pub struct SshSession {
     pub info: SessionInfo,
+    pub request: ConnectRequest,
     pub session: Session,
     pub _tcp: TcpStream,
 }

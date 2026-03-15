@@ -70,6 +70,8 @@ const keepaliveStorageKey = "tsh.keepaliveSettings.v1";
 
 const isSameAuthIdentity = (left: ConnectRequest["auth"], right: ConnectRequest["auth"]) => {
   switch (left.kind) {
+    case "none":
+      return right.kind === "none";
     case "password":
       return right.kind === "password";
     case "privateKey":
@@ -83,13 +85,15 @@ const cloneConnectRequest = (request: ConnectRequest): ConnectRequest => ({
   port: request.port,
   username: request.username,
   auth:
-    request.auth.kind === "password"
-      ? { kind: "password", password: request.auth.password }
-      : {
-          kind: "privateKey",
-          privateKeyPath: request.auth.privateKeyPath,
-          passphrase: request.auth.passphrase
-        }
+    request.auth.kind === "none"
+      ? { kind: "none" }
+      : request.auth.kind === "password"
+        ? { kind: "password", password: request.auth.password }
+        : {
+            kind: "privateKey",
+            privateKeyPath: request.auth.privateKeyPath,
+            passphrase: request.auth.passphrase
+          }
 });
 
 const isSameConnectionIdentity = (left: ConnectRequest, right: ConnectRequest) =>
@@ -127,6 +131,11 @@ export default function App() {
     x: number;
     y: number;
     entry: SftpEntry;
+  } | null>(null);
+  const [sessionContextMenu, setSessionContextMenu] = useState<{
+    x: number;
+    y: number;
+    sessionId: string;
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -486,6 +495,24 @@ export default function App() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  useEffect(() => {
+    const closeMenus = () => {
+      setContextMenu(null);
+      setSessionContextMenu(null);
+    };
+    const onEsc = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeMenus();
+      }
+    };
+    window.addEventListener("click", closeMenus);
+    window.addEventListener("keydown", onEsc);
+    return () => {
+      window.removeEventListener("click", closeMenus);
+      window.removeEventListener("keydown", onEsc);
+    };
+  }, []);
+
   const handleConnect = async (event: FormEvent) => {
     event.preventDefault();
     setLoading(true);
@@ -541,6 +568,20 @@ export default function App() {
     await openSessionRequests([request]);
   };
 
+  const duplicateSession = async (sessionId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const created = await invoke<SessionInfo>("duplicate_session", { sessionId });
+      setSessions((prev) => [created, ...prev]);
+      setActiveSessionId(created.id);
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const openJumpSessionFromServer = async (server: Server) => {
     setLoading(true);
     setError(null);
@@ -554,7 +595,6 @@ export default function App() {
           label: server.hostname || server.manageIp
         }
       );
-
       setSessions((prev) => [created, ...prev]);
       setActiveSessionId(created.id);
     } catch (err) {
@@ -568,6 +608,7 @@ export default function App() {
   const closeSession = async (sessionId: string) => {
     setLoading(true);
     setError(null);
+    setSessionContextMenu((prev) => (prev?.sessionId === sessionId ? null : prev));
     try {
       const terminalIdToClose = terminalBySessionRef.current.get(sessionId);
       if (terminalIdToClose) {
@@ -591,6 +632,7 @@ export default function App() {
     if (sessions.length === 0) return;
     setLoading(true);
     setError(null);
+    setSessionContextMenu(null);
     try {
       const ids = sessions.map((session) => session.id);
       await Promise.allSettled(ids.map((sessionId) => invoke("close_session", { sessionId })));
@@ -1261,29 +1303,7 @@ export default function App() {
                       </Button>
                     </div>
 
-                    {auth.kind === "password" ? (
-                      <div className="space-y-1">
-                        <Label htmlFor="password" className="text-[11px]">
-                          Password
-                        </Label>
-                        <Input
-                          id="password"
-                          type="password"
-                          placeholder="请输入密码"
-                          value={auth.password}
-                          onChange={(event) =>
-                            setConnectForm((prev) => ({
-                              ...prev,
-                              auth: {
-                                kind: "password",
-                                password: event.target.value
-                              }
-                            }))
-                          }
-                          required
-                        />
-                      </div>
-                    ) : (
+                    {auth.kind === "privateKey" ? (
                       <>
                         <div className="space-y-1">
                           <Label htmlFor="key-path" className="text-[11px]">
@@ -1328,6 +1348,28 @@ export default function App() {
                           />
                         </div>
                       </>
+                    ) : (
+                      <div className="space-y-1">
+                        <Label htmlFor="password" className="text-[11px]">
+                          Password
+                        </Label>
+                        <Input
+                          id="password"
+                          type="password"
+                          placeholder="请输入密码"
+                          value={auth.kind === "password" ? auth.password : ""}
+                          onChange={(event) =>
+                            setConnectForm((prev) => ({
+                              ...prev,
+                              auth: {
+                                kind: "password",
+                                password: event.target.value
+                              }
+                            }))
+                          }
+                          required
+                        />
+                      </div>
                     )}
 
                     <Button type="submit" disabled={loading} className="w-full">
@@ -1451,6 +1493,16 @@ export default function App() {
                             : "border-border/70 bg-card/90"
                         )}
                         onClick={() => setActiveSessionId(session.id)}
+                        onContextMenu={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setContextMenu(null);
+                          setSessionContextMenu({
+                            x: event.clientX,
+                            y: event.clientY,
+                            sessionId: session.id
+                          });
+                        }}
                       >
                         <div className="absolute left-0 top-0 h-full w-6 -skew-x-12 bg-muted/40" />
                         <div className="relative flex items-center gap-2">
@@ -1634,6 +1686,7 @@ export default function App() {
                   <div
                     className="fixed z-50 w-40 rounded-md border border-border/70 bg-card/95 p-1 text-xs shadow-[0_10px_30px_rgba(0,0,0,0.25)]"
                     style={{ left: contextMenu.x, top: contextMenu.y }}
+                    onClick={(event) => event.stopPropagation()}
                   >
                     <button
                       type="button"
@@ -1644,6 +1697,25 @@ export default function App() {
                       }}
                     >
                       下载到本地
+                    </button>
+                  </div>
+                ) : null}
+
+                {sessionContextMenu ? (
+                  <div
+                    className="fixed z-50 w-44 rounded-md border border-border/70 bg-card/95 p-1 text-xs shadow-[0_10px_30px_rgba(0,0,0,0.25)]"
+                    style={{ left: sessionContextMenu.x, top: sessionContextMenu.y }}
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      className="w-full rounded-sm px-2 py-1 text-left hover:bg-muted"
+                      onClick={() => {
+                        void duplicateSession(sessionContextMenu.sessionId);
+                        setSessionContextMenu(null);
+                      }}
+                    >
+                      Duplicate Session
                     </button>
                   </div>
                 ) : null}

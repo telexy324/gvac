@@ -20,6 +20,23 @@ pub fn create_session(
 }
 
 #[tauri::command]
+pub fn duplicate_session(state: State<'_, AppState>, session_id: String) -> AppResult<SessionInfo> {
+    let request = {
+        let sessions = state.sessions.lock().map_err(|_| state_lock_poisoned())?;
+        let existing = sessions.get(&session_id).ok_or(AppError::SessionNotFound)?;
+        existing.request.clone()
+    };
+
+    let created = connect_ssh(request)?;
+    let session_info = created.info.clone();
+
+    let mut sessions = state.sessions.lock().map_err(|_| state_lock_poisoned())?;
+    sessions.insert(session_info.id.clone(), created);
+
+    Ok(session_info)
+}
+
+#[tauri::command]
 pub fn list_sessions(state: State<'_, AppState>) -> AppResult<Vec<SessionInfo>> {
     let sessions = state.sessions.lock().map_err(|_| state_lock_poisoned())?;
 

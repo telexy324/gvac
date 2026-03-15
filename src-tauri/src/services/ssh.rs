@@ -9,6 +9,7 @@ use crate::models::{AuthMethod, ConnectRequest, SessionInfo};
 use crate::state::{now_utc, SshSession};
 
 pub fn connect_ssh(request: ConnectRequest) -> AppResult<SshSession> {
+    let request_copy = request.clone();
     if request.host.trim().is_empty() || request.username.trim().is_empty() {
         return Err(AppError::InvalidInput(
             "host and username are required".to_string(),
@@ -67,6 +68,7 @@ pub fn connect_ssh(request: ConnectRequest) -> AppResult<SshSession> {
             connected_at,
             last_active_at: connected_at,
         },
+        request: request_copy,
         session,
         _tcp: tcp,
     })
