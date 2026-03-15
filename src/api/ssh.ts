@@ -82,7 +82,8 @@ export const parseSessionToken = async (
   const payloadRaw = decodeBase64Url(payloadB64);
   let payload: SessionPayload;
   try {
-    payload = JSON.parse(new TextDecoder().decode(payloadRaw)) as SessionPayload;
+    const payloads = JSON.parse(new TextDecoder().decode(payloadRaw)) as SessionPayload[];
+    payload = payloads[0]
   } catch {
     throw new Error("invalid payload");
   }
@@ -141,6 +142,9 @@ export const createTauriSessionFromJumpToken = async (
 ): Promise<SessionInfo> => {
   const payload = await getParsedJumpServerSession(data, options.hmacKey ?? DEFAULT_HMAC_KEY);
   console.log(payload)
+  if (!payload.bh || !payload.s || !payload.bp) {
+    throw new Error("token payload incomplete for ssh session");
+  }
 
   return invoke<SessionInfo>("create_session", {
     request: {
