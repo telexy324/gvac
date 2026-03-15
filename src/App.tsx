@@ -164,6 +164,7 @@ export default function App() {
   const fitAddonRef = useRef<FitAddon | null>(null);
   const terminalIdRef = useRef<string | null>(null);
   const terminalBySessionRef = useRef<Map<string, string>>(new Map());
+  const sessionMenuOpenedAtRef = useRef(0);
   const terminalGenerationRef = useRef(0);
   const sessionBufferRef = useRef<Map<string, string>>(new Map());
   const maxBufferSize = 200_000;
@@ -496,7 +497,13 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const closeMenus = () => {
+    const closeMenus = (event?: MouseEvent) => {
+      if (event && event.button !== 0) {
+        return;
+      }
+      if (Date.now() - sessionMenuOpenedAtRef.current < 180) {
+        return;
+      }
       setContextMenu(null);
       setSessionContextMenu(null);
     };
@@ -505,10 +512,10 @@ export default function App() {
         closeMenus();
       }
     };
-    window.addEventListener("click", closeMenus);
+    window.addEventListener("mousedown", closeMenus);
     window.addEventListener("keydown", onEsc);
     return () => {
-      window.removeEventListener("click", closeMenus);
+      window.removeEventListener("mousedown", closeMenus);
       window.removeEventListener("keydown", onEsc);
     };
   }, []);
@@ -1496,6 +1503,7 @@ export default function App() {
                         onContextMenu={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
+                          sessionMenuOpenedAtRef.current = Date.now();
                           setContextMenu(null);
                           setSessionContextMenu({
                             x: event.clientX,
@@ -1686,6 +1694,7 @@ export default function App() {
                   <div
                     className="fixed z-50 w-40 rounded-md border border-border/70 bg-card/95 p-1 text-xs shadow-[0_10px_30px_rgba(0,0,0,0.25)]"
                     style={{ left: contextMenu.x, top: contextMenu.y }}
+                    onMouseDown={(event) => event.stopPropagation()}
                     onClick={(event) => event.stopPropagation()}
                   >
                     <button
@@ -1705,6 +1714,7 @@ export default function App() {
                   <div
                     className="fixed z-50 w-44 rounded-md border border-border/70 bg-card/95 p-1 text-xs shadow-[0_10px_30px_rgba(0,0,0,0.25)]"
                     style={{ left: sessionContextMenu.x, top: sessionContextMenu.y }}
+                    onMouseDown={(event) => event.stopPropagation()}
                     onClick={(event) => event.stopPropagation()}
                   >
                     <button
