@@ -127,6 +127,7 @@ export const getParsedJumpServerSession = async (
 };
 
 export type CreateSessionAuth =
+  | { kind: "none" }
   | { kind: "password"; password: string }
   | { kind: "privateKey"; privateKeyPath: string; passphrase?: string };
 
@@ -151,7 +152,7 @@ export const createTauriSessionFromJumpToken = async (
       host: payload.bh,
       port: payload.bp,
       username: payload.s,
-      auth: { kind: "password", password: "111111" }
+      auth: options.auth ?? { kind: "none" }
     }
   });
 };

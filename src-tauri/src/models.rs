@@ -5,6 +5,8 @@ use std::collections::HashMap;
 #[derive(Debug, Deserialize)]
 #[serde(tag = "kind")]
 pub enum AuthMethod {
+    #[serde(rename = "none")]
+    None,
     #[serde(rename = "password")]
     Password { password: String },
     #[serde(rename = "privateKey")]

@@ -24,6 +24,10 @@ pub fn connect_ssh(request: ConnectRequest) -> AppResult<SshSession> {
     session.handshake()?;
 
     match request.auth {
+        AuthMethod::None => {
+            // Trigger "none" auth flow; for NoClientAuth servers this should authenticate directly.
+            let _ = session.auth_methods(request.username.trim())?;
+        }
         AuthMethod::Password { password } => {
             session.userauth_password(request.username.trim(), password.as_str())?;
         }
