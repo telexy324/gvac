@@ -141,7 +141,6 @@ export const createTauriSessionFromJumpToken = async (
   options: CreateJumpSessionOptions
 ): Promise<SessionInfo> => {
   const payload = await getParsedJumpServerSession(data, options.hmacKey ?? DEFAULT_HMAC_KEY);
-  console.log(payload)
   if (!payload.bh || !payload.s || !payload.bp) {
     throw new Error("token payload incomplete for ssh session");
   }
@@ -152,7 +151,7 @@ export const createTauriSessionFromJumpToken = async (
       host: payload.bh,
       port: payload.bp,
       username: payload.s,
-      auth: options.auth ?? { kind: "password", password: "" }
+      auth: { kind: "password", password: "111111" }
     }
   });
 };
