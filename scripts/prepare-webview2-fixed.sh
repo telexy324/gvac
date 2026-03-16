@@ -161,12 +161,12 @@ cat > "$LAUNCHER" <<EOF2
 setlocal
 set "APP_DIR=%~dp0"
 set "WEBVIEW2_BROWSER_EXECUTABLE_FOLDER=%APP_DIR%FixedRuntime\\$RUNTIME_DIR_NAME"
-start "" "%APP_DIR%tauri-ssh-client.exe"
+start "" "%APP_DIR%gvac.exe"
 EOF2
 
 echo "Fixed runtime extracted to: $RUNTIME_ROOT/$RUNTIME_DIR_NAME"
-if [[ -f "$DIST_DIR/tauri-ssh-client.exe" ]]; then
+if [[ -f "$DIST_DIR/gvac.exe" ]]; then
   echo "Launcher created: $LAUNCHER"
 else
-  echo "Note: tauri-ssh-client.exe not found in $DIST_DIR yet. Build first, then re-run to refresh launcher." >&2
+  echo "Note: gvac.exe not found in $DIST_DIR yet. Build first, then re-run to refresh launcher." >&2
 fi

@@ -10,7 +10,7 @@ import {
 } from "@/lib/api";
 import { useAuthStore } from "@/stores/useAuthStore";
 
-const DEFAULT_BASE_URL = "http://127.0.0.1:8888";
+const DEFAULT_BASE_URL = "http://188.4.32.11:44480/api";
 const DEFAULT_BROWSER_BASE_URL = "/api";
 let initialized = false;
 
@@ -19,9 +19,11 @@ const ensureClient = async () => {
     return;
   }
 
-  const baseURL =
-    (import.meta.env.VITE_BASE_API as string | undefined) ||
-    (isTauriRuntime() ? DEFAULT_BASE_URL : DEFAULT_BROWSER_BASE_URL);
+  const tauriBaseUrl = (import.meta.env.VITE_TAURI_BASE_API as string | undefined)?.trim();
+  const browserBaseUrl = (import.meta.env.VITE_BASE_API as string | undefined)?.trim();
+  const baseURL = isTauriRuntime()
+    ? tauriBaseUrl || DEFAULT_BASE_URL
+    : browserBaseUrl || DEFAULT_BROWSER_BASE_URL;
   await initApiClient(baseURL, 60_000);
 
   const { token, userInfo } = useAuthStore.getState();
