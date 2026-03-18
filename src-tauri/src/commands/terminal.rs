@@ -3,9 +3,12 @@ use std::io::{Read, Write};
 use tauri::State;
 use uuid::Uuid;
 
+use crate::diagnostics;
 use crate::errors::{state_lock_poisoned, AppError, AppResult};
 use crate::models::TerminalStartResult;
 use crate::state::{set_last_active, AppState, TerminalSession};
+
+const MAX_READ_BYTES_PER_POLL: usize = 64 * 1024;
 
 #[tauri::command]
 pub fn start_terminal(
@@ -29,12 +32,15 @@ pub fn start_terminal(
     drop(sessions);
 
     let terminal = TerminalSession {
-        session_id,
+        session_id: session_id.clone(),
         channel,
     };
 
     let mut terminals = state.terminals.lock().map_err(|_| state_lock_poisoned())?;
     terminals.insert(terminal_id.clone(), terminal);
+    diagnostics::log(&format!(
+        "start_terminal session_id={session_id} terminal_id={terminal_id}"
+    ));
 
     Ok(TerminalStartResult { terminal_id })
 }
@@ -50,8 +56,18 @@ pub fn terminal_write(
         let terminal = terminals
             .get_mut(&terminal_id)
             .ok_or(AppError::TerminalNotFound)?;
-        terminal.channel.write_all(data.as_bytes())?;
-        terminal.channel.flush()?;
+        if let Err(err) = terminal.channel.write_all(data.as_bytes()) {
+            diagnostics::log(&format!(
+                "terminal_write failed terminal_id={terminal_id} err={err}"
+            ));
+            return Err(AppError::Io(err));
+        }
+        if let Err(err) = terminal.channel.flush() {
+            diagnostics::log(&format!(
+                "terminal_write flush failed terminal_id={terminal_id} err={err}"
+            ));
+            return Err(AppError::Io(err));
+        }
         terminal.session_id.clone()
     };
 
@@ -89,20 +105,36 @@ pub fn terminal_read(state: State<'_, AppState>, terminal_id: String) -> AppResu
 
         let mut buf = [0_u8; 4096];
         loop {
+            if output.len() >= MAX_READ_BYTES_PER_POLL {
+                break;
+            }
             match terminal.channel.read(&mut buf) {
                 Ok(0) => break,
                 Ok(n) => output.extend_from_slice(&buf[..n]),
                 Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => break,
-                Err(err) => return Err(AppError::Io(err)),
+                Err(err) => {
+                    diagnostics::log(&format!(
+                        "terminal_read stdout failed terminal_id={terminal_id} err={err}"
+                    ));
+                    return Err(AppError::Io(err));
+                }
             }
         }
 
         loop {
+            if output.len() >= MAX_READ_BYTES_PER_POLL {
+                break;
+            }
             match terminal.channel.stderr().read(&mut buf) {
                 Ok(0) => break,
                 Ok(n) => output.extend_from_slice(&buf[..n]),
                 Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => break,
-                Err(err) => return Err(AppError::Io(err)),
+                Err(err) => {
+                    diagnostics::log(&format!(
+                        "terminal_read stderr failed terminal_id={terminal_id} err={err}"
+                    ));
+                    return Err(AppError::Io(err));
+                }
             }
         }
     }
@@ -141,5 +173,6 @@ pub fn close_terminal(state: State<'_, AppState>, terminal_id: String) -> AppRes
         .ok_or(AppError::TerminalNotFound)?;
     let _ = terminal.channel.close();
     let _ = terminal.channel.wait_close();
+    diagnostics::log(&format!("close_terminal terminal_id={terminal_id}"));
     Ok(())
 }

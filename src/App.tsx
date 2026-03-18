@@ -424,8 +424,10 @@ export default function App() {
     if (!terminalId) return;
 
     let cancelled = false;
+    let reading = false;
     const timer = window.setInterval(async () => {
-      if (cancelled) return;
+      if (cancelled || reading) return;
+      reading = true;
       try {
         const output = await invoke<string>("terminal_read", { terminalId });
         if (!output) return;
@@ -440,6 +442,8 @@ export default function App() {
         }
       } catch {
         // ignore transient read errors
+      } finally {
+        reading = false;
       }
     }, 80);
 

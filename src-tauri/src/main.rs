@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod commands;
+mod diagnostics;
 mod errors;
 mod models;
 mod services;
@@ -15,7 +16,9 @@ use commands::{
 use state::AppState;
 
 fn main() {
-    tauri::Builder::default()
+    let log_dir = diagnostics::init();
+
+    let app_result = tauri::Builder::default()
         .manage(AppState::default())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
@@ -42,6 +45,13 @@ fn main() {
             api_request,
             api_login
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri app");
+        .run(tauri::generate_context!());
+
+    match app_result {
+        Ok(_) => diagnostics::log_runtime(&log_dir, "app exited normally"),
+        Err(err) => {
+            diagnostics::log_runtime(&log_dir, &format!("fatal tauri runtime error: {err}"));
+            panic!("error while running tauri app: {err}");
+        }
+    }
 }
