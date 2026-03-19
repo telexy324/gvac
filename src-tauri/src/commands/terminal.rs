@@ -10,6 +10,17 @@ use crate::state::{set_last_active, AppState, TerminalSession};
 
 const MAX_READ_BYTES_PER_POLL: usize = 64 * 1024;
 
+fn restore_session_blocking(state: &State<'_, AppState>, session_id: &str, touch_active: bool) {
+    if let Ok(mut sessions) = state.sessions.lock() {
+        if let Some(item) = sessions.get_mut(session_id) {
+            item.session.set_blocking(true);
+            if touch_active {
+                set_last_active(item);
+            }
+        }
+    }
+}
+
 #[tauri::command]
 pub fn start_terminal(
     state: State<'_, AppState>,
@@ -53,22 +64,28 @@ pub fn terminal_write(
 ) -> AppResult<()> {
     let session_id = {
         let mut terminals = state.terminals.lock().map_err(|_| state_lock_poisoned())?;
-        let terminal = terminals
-            .get_mut(&terminal_id)
+        let mut terminal = terminals
+            .remove(&terminal_id)
             .ok_or(AppError::TerminalNotFound)?;
-        if let Err(err) = terminal.channel.write_all(data.as_bytes()) {
-            diagnostics::log(&format!(
-                "terminal_write failed terminal_id={terminal_id} err={err}"
-            ));
-            return Err(AppError::Io(err));
+        let session_id = terminal.session_id.clone();
+        let write_result = terminal
+            .channel
+            .write_all(data.as_bytes())
+            .and_then(|_| terminal.channel.flush());
+        match write_result {
+            Ok(()) => {
+                terminals.insert(terminal_id.clone(), terminal);
+            }
+            Err(err) => {
+                diagnostics::log(&format!(
+                    "terminal_write failed terminal_id={terminal_id} err={err}"
+                ));
+                let _ = terminal.channel.close();
+                let _ = terminal.channel.wait_close();
+                return Err(AppError::Io(err));
+            }
         }
-        if let Err(err) = terminal.channel.flush() {
-            diagnostics::log(&format!(
-                "terminal_write flush failed terminal_id={terminal_id} err={err}"
-            ));
-            return Err(AppError::Io(err));
-        }
-        terminal.session_id.clone()
+        session_id
     };
 
     let mut sessions = state.sessions.lock().map_err(|_| state_lock_poisoned())?;
@@ -96,11 +113,11 @@ pub fn terminal_read(state: State<'_, AppState>, terminal_id: String) -> AppResu
         }
     }
 
-    let mut output = Vec::<u8>::new();
-    {
+    let read_result: AppResult<String> = (|| {
+        let mut output = Vec::<u8>::new();
         let mut terminals = state.terminals.lock().map_err(|_| state_lock_poisoned())?;
-        let terminal = terminals
-            .get_mut(&terminal_id)
+        let mut terminal = terminals
+            .remove(&terminal_id)
             .ok_or(AppError::TerminalNotFound)?;
 
         let mut buf = [0_u8; 4096];
@@ -116,6 +133,8 @@ pub fn terminal_read(state: State<'_, AppState>, terminal_id: String) -> AppResu
                     diagnostics::log(&format!(
                         "terminal_read stdout failed terminal_id={terminal_id} err={err}"
                     ));
+                    let _ = terminal.channel.close();
+                    let _ = terminal.channel.wait_close();
                     return Err(AppError::Io(err));
                 }
             }
@@ -133,19 +152,19 @@ pub fn terminal_read(state: State<'_, AppState>, terminal_id: String) -> AppResu
                     diagnostics::log(&format!(
                         "terminal_read stderr failed terminal_id={terminal_id} err={err}"
                     ));
+                    let _ = terminal.channel.close();
+                    let _ = terminal.channel.wait_close();
                     return Err(AppError::Io(err));
                 }
             }
         }
-    }
 
-    let mut sessions = state.sessions.lock().map_err(|_| state_lock_poisoned())?;
-    if let Some(item) = sessions.get_mut(&session_id) {
-        item.session.set_blocking(true);
-        set_last_active(item);
-    }
+        terminals.insert(terminal_id.clone(), terminal);
+        Ok(String::from_utf8_lossy(&output).to_string())
+    })();
 
-    Ok(String::from_utf8_lossy(&output).to_string())
+    restore_session_blocking(&state, &session_id, read_result.is_ok());
+    read_result
 }
 
 #[tauri::command]

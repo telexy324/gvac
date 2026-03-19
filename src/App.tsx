@@ -167,6 +167,7 @@ export default function App() {
   const sessionMenuOpenedAtRef = useRef(0);
   const terminalGenerationRef = useRef(0);
   const sessionBufferRef = useRef<Map<string, string>>(new Map());
+  const activeSessionIdRef = useRef<string | null>(activeSessionId);
   const maxBufferSize = 200_000;
   const navigate = useNavigate();
 
@@ -213,6 +214,26 @@ export default function App() {
     terminalIdRef.current = null;
     setTerminalId(null);
     await Promise.allSettled(terminals.map((id) => closeTerminalInstance(id)));
+  };
+
+  const detachTerminal = (id: string, sessionId?: string | null) => {
+    if (terminalIdRef.current === id) {
+      terminalIdRef.current = null;
+      setTerminalId(null);
+      xtermRef.current?.writeln("\r\n[terminal disconnected]");
+    }
+    if (sessionId) {
+      const mapped = terminalBySessionRef.current.get(sessionId);
+      if (mapped === id) {
+        terminalBySessionRef.current.delete(sessionId);
+      }
+      return;
+    }
+    for (const [sid, tid] of terminalBySessionRef.current.entries()) {
+      if (tid === id) {
+        terminalBySessionRef.current.delete(sid);
+      }
+    }
   };
 
   const startTerminalForActiveSession = async (sessionId: string) => {
@@ -286,8 +307,12 @@ export default function App() {
     const dataHandler = term.onData((data) => {
       const id = terminalIdRef.current;
       if (!id) return;
-      void invoke("terminal_write", { terminalId: id, data }).catch(() => {
-        // ignore transient write errors
+      const currentSessionId = activeSessionIdRef.current;
+      void invoke("terminal_write", { terminalId: id, data }).catch((err) => {
+        const message = String(err);
+        if (message.includes("Terminal not found") || message.includes("I/O error")) {
+          detachTerminal(id, currentSessionId);
+        }
       });
     });
 
@@ -393,6 +418,10 @@ export default function App() {
   }, [keepaliveEnabled, keepaliveIntervalSec]);
 
   useEffect(() => {
+    activeSessionIdRef.current = activeSessionId;
+  }, [activeSessionId]);
+
+  useEffect(() => {
     if (!activeSessionId) {
       if (sessions.length === 0) {
         void closeAllTerminals();
@@ -440,8 +469,11 @@ export default function App() {
           }
           sessionBufferRef.current.set(activeSessionId, next);
         }
-      } catch {
-        // ignore transient read errors
+      } catch (err) {
+        const message = String(err);
+        if (message.includes("Terminal not found") || message.includes("I/O error")) {
+          detachTerminal(terminalId, activeSessionId);
+        }
       } finally {
         reading = false;
       }
