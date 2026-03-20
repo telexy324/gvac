@@ -11,12 +11,14 @@ pub struct SshSession {
     pub info: SessionInfo,
     pub request: ConnectRequest,
     pub session: Session,
+    pub op_lock: Arc<Mutex<()>>,
     pub _tcp: TcpStream,
 }
 
 pub struct TerminalSession {
     pub session_id: String,
     pub channel: Channel,
+    pub op_lock: Arc<Mutex<()>>,
 }
 
 #[derive(Clone, Default)]

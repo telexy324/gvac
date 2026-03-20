@@ -492,8 +492,11 @@ export default function App() {
 
     const sendKeepaliveToAll = async () => {
       if (cancelled || sessions.length === 0) return;
+      const activeTerminalSessions = new Set(terminalBySessionRef.current.keys());
+      const targets = sessions.filter((session) => !activeTerminalSessions.has(session.id));
+      if (targets.length === 0) return;
       await Promise.allSettled(
-        sessions.map((session) => invoke("send_keepalive", { sessionId: session.id }))
+        targets.map((session) => invoke("send_keepalive", { sessionId: session.id }))
       );
       if (!cancelled) {
         setLastKeepaliveAt(Date.now());

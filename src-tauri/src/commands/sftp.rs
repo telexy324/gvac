@@ -20,6 +20,13 @@ pub fn sftp_list_dir(
         path.trim()
     };
 
+    let op_lock = {
+        let sessions = state.sessions.lock().map_err(|_| state_lock_poisoned())?;
+        let item = sessions.get(&session_id).ok_or(AppError::SessionNotFound)?;
+        item.op_lock.clone()
+    };
+    let _op_guard = op_lock.lock().map_err(|_| state_lock_poisoned())?;
+
     let mut sessions = state.sessions.lock().map_err(|_| state_lock_poisoned())?;
     let item = sessions
         .get_mut(&session_id)
@@ -78,6 +85,13 @@ pub fn sftp_upload(
         ));
     }
 
+    let op_lock = {
+        let sessions = state.sessions.lock().map_err(|_| state_lock_poisoned())?;
+        let item = sessions.get(&session_id).ok_or(AppError::SessionNotFound)?;
+        item.op_lock.clone()
+    };
+    let _op_guard = op_lock.lock().map_err(|_| state_lock_poisoned())?;
+
     let mut sessions = state.sessions.lock().map_err(|_| state_lock_poisoned())?;
     let item = sessions
         .get_mut(&session_id)
@@ -107,6 +121,13 @@ pub fn sftp_download(
             "local_path and remote_path are required".to_string(),
         ));
     }
+
+    let op_lock = {
+        let sessions = state.sessions.lock().map_err(|_| state_lock_poisoned())?;
+        let item = sessions.get(&session_id).ok_or(AppError::SessionNotFound)?;
+        item.op_lock.clone()
+    };
+    let _op_guard = op_lock.lock().map_err(|_| state_lock_poisoned())?;
 
     let mut sessions = state.sessions.lock().map_err(|_| state_lock_poisoned())?;
     let item = sessions

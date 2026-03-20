@@ -18,6 +18,13 @@ pub fn run_command(
         ));
     }
 
+    let op_lock = {
+        let sessions = state.sessions.lock().map_err(|_| state_lock_poisoned())?;
+        let item = sessions.get(&session_id).ok_or(AppError::SessionNotFound)?;
+        item.op_lock.clone()
+    };
+    let _op_guard = op_lock.lock().map_err(|_| state_lock_poisoned())?;
+
     let mut sessions = state.sessions.lock().map_err(|_| state_lock_poisoned())?;
     let item = sessions
         .get_mut(&session_id)
@@ -50,8 +57,14 @@ pub fn send_keepalive(
     state: State<'_, AppState>,
     session_id: String,
 ) -> AppResult<KeepaliveStatus> {
-    let mut sessions = state.sessions.lock().map_err(|_| state_lock_poisoned())?;
+    let op_lock = {
+        let sessions = state.sessions.lock().map_err(|_| state_lock_poisoned())?;
+        let item = sessions.get(&session_id).ok_or(AppError::SessionNotFound)?;
+        item.op_lock.clone()
+    };
+    let _op_guard = op_lock.lock().map_err(|_| state_lock_poisoned())?;
 
+    let mut sessions = state.sessions.lock().map_err(|_| state_lock_poisoned())?;
     let item = sessions
         .get_mut(&session_id)
         .ok_or(AppError::SessionNotFound)?;

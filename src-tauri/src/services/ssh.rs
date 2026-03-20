@@ -1,5 +1,6 @@
 use std::net::TcpStream;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 use ssh2::Session;
 use uuid::Uuid;
@@ -70,6 +71,7 @@ pub fn connect_ssh(request: ConnectRequest) -> AppResult<SshSession> {
         },
         request: request_copy,
         session,
+        op_lock: Arc::new(Mutex::new(())),
         _tcp: tcp,
     })
 }
