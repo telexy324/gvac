@@ -166,6 +166,7 @@ export default function App() {
   const terminalBySessionRef = useRef<Map<string, string>>(new Map());
   const sessionMenuOpenedAtRef = useRef(0);
   const terminalGenerationRef = useRef(0);
+  const reconnectingTerminalsRef = useRef<Set<string>>(new Set());
   const sessionBufferRef = useRef<Map<string, string>>(new Map());
   const activeSessionIdRef = useRef<string | null>(activeSessionId);
   const maxBufferSize = 200_000;
@@ -471,6 +472,26 @@ export default function App() {
         }
       } catch (err) {
         const message = String(err);
+        if (message.includes("transport read") && activeSessionId) {
+          const key = `${activeSessionId}:${terminalId}`;
+          if (!reconnectingTerminalsRef.current.has(key)) {
+            reconnectingTerminalsRef.current.add(key);
+            detachTerminal(terminalId, activeSessionId);
+            setError("Terminal disconnected, reconnecting...");
+            void (async () => {
+              try {
+                await closeTerminalInstance(terminalId);
+                await startTerminalForActiveSession(activeSessionId);
+                setError(null);
+              } catch (reconnectErr) {
+                setError(`Terminal reconnect failed: ${String(reconnectErr)}`);
+              } finally {
+                reconnectingTerminalsRef.current.delete(key);
+              }
+            })();
+          }
+          return;
+        }
         if (message.includes("Terminal not found") || message.includes("I/O error")) {
           detachTerminal(terminalId, activeSessionId);
         }
@@ -492,11 +513,8 @@ export default function App() {
 
     const sendKeepaliveToAll = async () => {
       if (cancelled || sessions.length === 0) return;
-      const activeTerminalSessions = new Set(terminalBySessionRef.current.keys());
-      const targets = sessions.filter((session) => !activeTerminalSessions.has(session.id));
-      if (targets.length === 0) return;
       await Promise.allSettled(
-        targets.map((session) => invoke("send_keepalive", { sessionId: session.id }))
+        sessions.map((session) => invoke("send_keepalive", { sessionId: session.id }))
       );
       if (!cancelled) {
         setLastKeepaliveAt(Date.now());

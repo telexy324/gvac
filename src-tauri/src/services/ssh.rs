@@ -50,7 +50,7 @@ pub fn connect_ssh(request: ConnectRequest) -> AppResult<SshSession> {
         return Err(AppError::AuthFailed);
     }
 
-    session.set_keepalive(true, 30);
+    session.set_keepalive(true, 10);
 
     let id = Uuid::new_v4().to_string();
     let connected_at = now_utc();

@@ -111,6 +111,7 @@ pub fn terminal_read(state: State<'_, AppState>, terminal_id: String) -> AppResu
     }
 
     let mut output = Vec::<u8>::new();
+    let mut read_error: Option<AppError> = None;
     {
         let mut terminals = state.terminals.lock().map_err(|_| state_lock_poisoned())?;
         let terminal = terminals
@@ -130,35 +131,26 @@ pub fn terminal_read(state: State<'_, AppState>, terminal_id: String) -> AppResu
                     diagnostics::log(&format!(
                         "terminal_read stdout failed terminal_id={terminal_id} err={err}"
                     ));
-                    return Err(AppError::Io(err));
+                    read_error = Some(AppError::Io(err));
+                    break;
                 }
             }
         }
-
-        loop {
-            if output.len() >= MAX_READ_BYTES_PER_POLL {
-                break;
-            }
-            match terminal.channel.stderr().read(&mut buf) {
-                Ok(0) => break,
-                Ok(n) => output.extend_from_slice(&buf[..n]),
-                Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => break,
-                Err(err) => {
-                    diagnostics::log(&format!(
-                        "terminal_read stderr failed terminal_id={terminal_id} err={err}"
-                    ));
-                    return Err(AppError::Io(err));
-                }
-            }
-        }
+        // For interactive PTY shells stderr is typically merged into stdout.
+        // Avoid reading the extended stream to reduce libssh2 stream-state issues.
     }
 
     let mut sessions = state.sessions.lock().map_err(|_| state_lock_poisoned())?;
     if let Some(item) = sessions.get_mut(&session_id) {
         item.session.set_blocking(true);
-        set_last_active(item);
+        if read_error.is_none() {
+            set_last_active(item);
+        }
     }
 
+    if let Some(err) = read_error {
+        return Err(err);
+    }
     Ok(String::from_utf8_lossy(&output).to_string())
 }
 
