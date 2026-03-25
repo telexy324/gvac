@@ -2,6 +2,7 @@ use tauri::State;
 
 use crate::errors::{state_lock_poisoned, AppError, AppResult};
 use crate::models::{ConnectRequest, SessionInfo};
+use crate::state::TerminalWorkerCommand;
 use crate::services::ssh::connect_ssh;
 use crate::state::AppState;
 
@@ -56,17 +57,22 @@ pub fn close_session(state: State<'_, AppState>, session_id: String) -> AppResul
     }
 
     let mut terminals = state.terminals.lock().map_err(|_| state_lock_poisoned())?;
-
     let keys: Vec<String> = terminals
         .iter()
         .filter(|(_, terminal)| terminal.session_id == session_id)
         .map(|(id, _)| id.clone())
         .collect();
-
+    let mut removed = Vec::new();
     for terminal_id in keys {
-        if let Some(mut terminal) = terminals.remove(&terminal_id) {
-            let _ = terminal.channel.close();
-            let _ = terminal.channel.wait_close();
+        if let Some(terminal) = terminals.remove(&terminal_id) {
+            removed.push(terminal);
+        }
+    }
+    drop(terminals);
+    for mut terminal in removed {
+        let _ = terminal.input_tx.send(TerminalWorkerCommand::Close);
+        if let Some(handle) = terminal.join_handle.take() {
+            let _ = handle.join();
         }
     }
 

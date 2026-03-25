@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 use std::net::TcpStream;
+use std::sync::atomic::AtomicBool;
+use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
+use std::thread::JoinHandle;
 
 use chrono::{DateTime, Utc};
-use ssh2::{Channel, Session};
+use ssh2::Session;
 
 use crate::models::{ConnectRequest, SessionInfo};
 
@@ -17,8 +20,18 @@ pub struct SshSession {
 
 pub struct TerminalSession {
     pub session_id: String,
-    pub channel: Channel,
+    pub input_tx: Sender<TerminalWorkerCommand>,
+    pub output_buffer: Arc<Mutex<Vec<u8>>>,
+    pub last_error: Arc<Mutex<Option<String>>>,
+    pub closed: Arc<AtomicBool>,
+    pub join_handle: Option<JoinHandle<()>>,
     pub op_lock: Arc<Mutex<()>>,
+}
+
+pub enum TerminalWorkerCommand {
+    Write(Vec<u8>),
+    Resize { cols: u32, rows: u32 },
+    Close,
 }
 
 #[derive(Clone, Default)]
